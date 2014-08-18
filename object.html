@@ -1,16 +1,15 @@
-<html>
-  <head>
-    <title>{{ name }}</title>
-  </head>
-  <body>
-    <h1>{{ name }}</h1>
-    <table>
-      {% for key, value in items %}
-        <tr>
-          <td>{{ key }}</td>
-          <td>{% raw str(value) %}</td>
-        </tr>
-      {% end %}
-    </table>
-  </body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}{{ name }}{% end %}
+
+{% block body %}
+<h1>{{ name }}</h1>
+<table>
+  {% for key, value in items %}
+    <tr>
+      <td>{{ key }}</td>
+      <td>{% raw str(value) %}</td>
+    </tr>
+  {% end %}
+</table>
+{% end %}

@@ -1,13 +1,1 @@
-<html>
-  <head>
-    <title>{{ name }}</title>
-  </head>
-  <body>
-    <h1>{{ name }}</h1>
-    <ul>
-      {% for item in items %}
-        <li>{% raw item %}</li>
-      {% end %}
-    </ul>
-  </body>
-</html>
+{% extends "collection.html" %}
