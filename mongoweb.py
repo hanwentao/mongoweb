@@ -12,6 +12,11 @@ connection = pymongo.Connection()
 db = connection['test']
 
 
+def make_collection_link(db, collection_name):
+    name = collection_name.title()
+    link = '<a href="/{collection_name}/">{name}</a>'.format(**locals())
+    return link
+
 def make_object_link(db, collection_name, object):
     object_id = object['_id']
     name = object['name']
@@ -37,7 +42,13 @@ class MainHandler(tornado.web.RequestHandler):
         self.db = db
 
     def get(self):
-        self.write('<h1>Main</h1>')
+        db = self.db
+        collection_names = db.collection_names(False)
+        items = []
+        for collection_name in sorted(collection_names):
+            link = make_collection_link(db, collection_name)
+            items.append(link)
+        self.render('index.html', name='Main', items=items)
 
 
 class CollectionHandler(tornado.web.RequestHandler):
