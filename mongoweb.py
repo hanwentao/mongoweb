@@ -19,7 +19,7 @@ def make_collection_link(db, collection_name):
 
 def make_object_link(db, collection_name, object):
     object_id = object['_id']
-    name = object['name']
+    name = object.get('name', object_id)
     link = '<a href="/{collection_name}/{object_id}/">{name}</a>'.format(**locals())
     return link
 
@@ -34,6 +34,15 @@ def find_object_link(db, object_id):
     else:
         link = 'unknown object'
     return link
+
+def render(object):
+    if isinstance(object, ObjectId):
+        result = find_object_link(db, object)
+    elif isinstance(object, list):
+        result = '<ul>\n' + '\n'.join('<li>' + render(e) + '</li>' for e in object) + '</ul>'
+    else:
+        result = str(object)
+    return result
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -62,7 +71,7 @@ class CollectionHandler(tornado.web.RequestHandler):
         collection = db[collection_name]
         objects = collection.find()
         items = []
-        for object in sorted(objects, key=lambda x: x['name']):
+        for object in sorted(objects, key=lambda x: x.get('name', str(x['_id']))):
             link = make_object_link(db, collection_name, object)
             items.append(link)
         self.render('collection.html', name=collection_name.title(), items=items)
@@ -79,15 +88,12 @@ class ObjectHandler(tornado.web.RequestHandler):
         collection = db[collection_name]
         object_id = ObjectId(id)
         object = collection.find_one({'_id': object_id})
-        name = object['name']
+        name = object.get('name', object_id)
         items = []
         for key, value in sorted(object.items()):
             if key == 'name' or key.startswith('_'):
                 continue
-            if isinstance(value, ObjectId):
-                value = find_object_link(db, value)
-            else:
-                value = str(value)
+            value = render(value)
             items.append((key, value))
         self.render('object.html', name=name, items=items)
 
@@ -96,7 +102,7 @@ application = tornado.web.Application([
     (r'/', MainHandler, dict(db=db)),
     (r'/([_a-z]+)/?', CollectionHandler, dict(db=db)),
     (r'/([_a-z]+)/([0-9a-f]+)/?', ObjectHandler, dict(db=db)),
-])
+], autoreload=True)
 
 
 if __name__ == '__main__':
