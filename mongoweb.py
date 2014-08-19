@@ -49,7 +49,7 @@ def render_as_html(object, db=None, collection_name=None):
     elif isinstance(object, DBRef):
         result = make_object_link(db, object.collection, db.dereference(object))
     elif isinstance(object, list):
-        result = '<ul>\n' + '\n'.join('<li>' + render_as_html(e, db, collection_name) + '</li>' for e in object) + '</ul>'
+        result = '<ul class="list-unstyled">\n' + '\n'.join('<li>' + render_as_html(e, db, collection_name) + '</li>' for e in object) + '</ul>'
     else:
         result = str(object)
     return result
