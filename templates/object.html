@@ -4,10 +4,10 @@
 
 {% block body %}
 <h1>{{ name }}</h1>
-<table>
+<table class="table table-bordered">
   {% for key, value in items %}
     <tr>
-      <td>{{ key }}</td>
+      <th>{{ key }}</th>
       <td>{% raw str(value) %}</td>
     </tr>
   {% end %}
