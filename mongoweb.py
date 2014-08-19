@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 # Wentao Han (wentao.han@gmail.com)
 
-import pymongo
 import tornado.ioloop
 import tornado.web
 
 from bson.objectid import ObjectId
-
-
-connection = pymongo.Connection()
-db = connection['test']
+from bson.dbref import DBRef
 
 
 def load_settings():
@@ -34,8 +30,9 @@ def make_object_link(db, collection_name, object):
     link = '<a href="/{collection_name}/{object_id}/">{name}</a>'.format(**locals())
     return link
 
-def find_object_link(db, object_id):
+def find_object_link(db, collection_name, object_id):
     collection_names = db.collection_names(False)
+    collection_names.insert(0, collection_name)
     for collection_name in collection_names:
         collection = db[collection_name]
         object = collection.find_one({'_id': object_id})
@@ -46,11 +43,13 @@ def find_object_link(db, object_id):
         link = 'unknown object'
     return link
 
-def render(object):
+def render_as_html(object, db=None, collection_name=None):
     if isinstance(object, ObjectId):
-        result = find_object_link(db, object)
+        result = find_object_link(db, collection_name, object)
+    elif isinstance(object, DBRef):
+        result = make_object_link(db, object.collection, db.dereference(object))
     elif isinstance(object, list):
-        result = '<ul>\n' + '\n'.join('<li>' + render(e) + '</li>' for e in object) + '</ul>'
+        result = '<ul>\n' + '\n'.join('<li>' + render_as_html(e, db, collection_name) + '</li>' for e in object) + '</ul>'
     else:
         result = str(object)
     return result
@@ -58,11 +57,8 @@ def render(object):
 
 class MainHandler(tornado.web.RequestHandler):
 
-    def initialize(self, db):
-        self.db = db
-
     def get(self):
-        db = self.db
+        db = self.settings['db']
         collection_names = db.collection_names(False)
         items = []
         for collection_name in sorted(collection_names):
@@ -73,12 +69,9 @@ class MainHandler(tornado.web.RequestHandler):
 
 class CollectionHandler(tornado.web.RequestHandler):
 
-    def initialize(self, db):
-        self.db = db
-
     @tornado.web.addslash
     def get(self, collection_name):
-        db = self.db
+        db = self.settings['db']
         collection = db[collection_name]
         objects = collection.find()
         items = []
@@ -90,12 +83,9 @@ class CollectionHandler(tornado.web.RequestHandler):
 
 class ObjectHandler(tornado.web.RequestHandler):
 
-    def initialize(self, db):
-        self.db = db
-
     @tornado.web.addslash
     def get(self, collection_name, id):
-        db = self.db
+        db = self.settings['db']
         collection = db[collection_name]
         object_id = ObjectId(id)
         object = collection.find_one({'_id': object_id})
@@ -104,7 +94,7 @@ class ObjectHandler(tornado.web.RequestHandler):
         for key, value in sorted(object.items()):
             if key == 'name' or key.startswith('_'):
                 continue
-            value = render(value)
+            value = render_as_html(value, db=db, collection_name=collection_name)
             items.append((key, value))
         self.render('object.html', name=name, items=items)
 
@@ -112,9 +102,9 @@ class ObjectHandler(tornado.web.RequestHandler):
 settings = load_settings()
 
 application = tornado.web.Application([
-    (r'/', MainHandler, dict(db=db)),
-    (r'/([_a-z]+)/?', CollectionHandler, dict(db=db)),
-    (r'/([_a-z]+)/([0-9a-f]+)/?', ObjectHandler, dict(db=db)),
+    (r'/', MainHandler),
+    (r'/([_a-z]+)/?', CollectionHandler),
+    (r'/([_a-z]+)/([0-9a-f]+)/?', ObjectHandler),
 ], **settings)
 
 
