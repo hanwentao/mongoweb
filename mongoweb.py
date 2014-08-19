@@ -12,6 +12,17 @@ connection = pymongo.Connection()
 db = connection['test']
 
 
+def load_settings():
+    import settings
+    result = {}
+    for key, value in settings.__dict__.items():
+        if key.startswith('_'):
+            continue
+        result[key] = value
+    if result.get('debug', False):
+        print(result)
+    return result
+
 def make_collection_link(db, collection_name):
     name = collection_name.title()
     link = '<a href="/{collection_name}/">{name}</a>'.format(**locals())
@@ -98,11 +109,13 @@ class ObjectHandler(tornado.web.RequestHandler):
         self.render('object.html', name=name, items=items)
 
 
+settings = load_settings()
+
 application = tornado.web.Application([
     (r'/', MainHandler, dict(db=db)),
     (r'/([_a-z]+)/?', CollectionHandler, dict(db=db)),
     (r'/([_a-z]+)/([0-9a-f]+)/?', ObjectHandler, dict(db=db)),
-], autoreload=True)
+], **settings)
 
 
 if __name__ == '__main__':
